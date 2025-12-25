@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import { getMyOrders } from '../api';
 import type { Order } from '../types';
 
 export default function MyOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    api.get<Order[]>('/orders/my-orders').then((res) => setOrders(res.data));
+    getMyOrders().then(setOrders).catch(console.error);
   }, []);
 
   return (

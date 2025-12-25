@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { getEventById, updateOrganizerEvent } from '../api';
 import type { EventData } from '../types';
 import { useToast } from '../hooks/useToast';
 import Loading from '../components/Loading';
@@ -24,9 +24,9 @@ export default function EditEvent() {
   }, [id]);
 
   const loadEvent = async () => {
+    if (!id) return;
     try {
-      const res = await api.get<EventData>(`/events/${id}`);
-      const event = res.data;
+      const event = await getEventById(parseInt(id));
       setForm({
         title: event.title,
         description: event.description,
@@ -66,11 +66,23 @@ export default function EditEvent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id) return;
     setLoading(true);
     try {
-      await api.put(`/organizer/events/${id}`, {
-        ...form,
-        ticket_types: tickets
+      const eventDate = form.event_date ? new Date(form.event_date).toISOString() : undefined;
+      
+      await updateOrganizerEvent(parseInt(id), {
+        title: form.title,
+        description: form.description,
+        venue: form.venue,
+        eventDate: eventDate,
+        posterUrl: form.poster_url,
+        ticketTypes: tickets.map(t => ({
+          id: t.id,
+          name: t.name,
+          price: t.price,
+          total_quantity: t.total_quantity,
+        })),
       });
       showToast('อัปเดตงานสำเร็จ! 🎉', 'success');
       setTimeout(() => {

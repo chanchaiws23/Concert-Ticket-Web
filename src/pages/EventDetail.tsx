@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import api from '../api/axios';
+import { getEventById, purchaseTickets } from '../api';
 import type { EventData } from '../types';
 import { useToast } from '../hooks/useToast';
 
@@ -16,10 +16,14 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get<EventData>(`/events/${id}`).then((res) => setEvent(res.data)).catch(() => {
-      showToast('ไม่พบงานที่คุณต้องการ', 'error');
-      navigate('/');
-    });
+    if (id) {
+      getEventById(parseInt(id))
+        .then(setEvent)
+        .catch(() => {
+          showToast('ไม่พบงานที่คุณต้องการ', 'error');
+          navigate('/');
+        });
+    }
   }, [id, navigate, showToast]);
 
   const handleBuy = async () => {
@@ -40,7 +44,7 @@ export default function EventDetail() {
 
     setLoading(true);
     try {
-      await api.post('/orders/purchase', {
+      await purchaseTickets({
         items: [{ ticketTypeId: parseInt(selectedTicketId), quantity }]
       });
       showToast('ซื้อบัตรสำเร็จ! เตรียมตัวไปมันส์ได้เลย 🎉', 'success');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import { getEvents } from '../api';
 import type { EventData } from '../types';
 
 export default function Home() {
@@ -8,7 +8,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    api.get<EventData[]>('/events').then((res) => setEvents(res.data));
+    getEvents().then(setEvents).catch(console.error);
   }, []);
 
   // Filter Event ตามคำค้นหา

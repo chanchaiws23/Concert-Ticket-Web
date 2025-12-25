@@ -1,8 +1,9 @@
 import { useEffect, useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import api from '../api/axios';
+import { getEvents, getOrganizerEvents, getOrganizerOrders, getAdminOrders, deleteOrganizerEvent, deleteAdminEvent } from '../api';
 import type { EventData, Order } from '../types';
+import Swal from 'sweetalert2';
 
 export default function OrganizerDashboard() {
   const auth = useContext(AuthContext);
@@ -29,33 +30,57 @@ export default function OrganizerDashboard() {
     try {
       setLoading(true);
       
-      // Fetch organizer's events
-      const eventsRes = await api.get<EventData[]>('/organizer/events').catch(() => ({ data: [] }));
-      setEvents(eventsRes.data);
+      // Fetch events - ถ้าเป็น ADMIN ให้ดึงทั้งหมด, ถ้าเป็น ORGANIZER ให้ดึงของตัวเอง
+      let eventsData: EventData[] = [];
+      if (auth?.user?.role === 'ADMIN') {
+        eventsData = await getEvents().catch(() => []);
+      } else {
+        const eventsRes = await getOrganizerEvents().catch(() => []);
+        eventsData = eventsRes;
+      }
+      setEvents(eventsData);
 
-      // Fetch orders for organizer's events
-      const ordersRes = await api.get<Order[]>('/organizer/orders').catch(() => ({ data: [] }));
-      setOrders(ordersRes.data);
+      // Fetch orders - ถ้าเป็น ADMIN ให้ดึงทั้งหมด, ถ้าเป็น ORGANIZER ให้ดึงของตัวเอง
+      let ordersData: Order[] = [];
+      if (auth?.user?.role === 'ADMIN') {
+        ordersData = await getAdminOrders().catch(() => []);
+      } else {
+        ordersData = await getOrganizerOrders().catch(() => []);
+      }
+      setOrders(ordersData);
 
-      // Calculate stats
+      // Calculate stats - แยกการคำนวณสำหรับ ADMIN และ ORGANIZER
       const now = new Date();
-      const upcomingEvents = eventsRes.data.filter(e => new Date(e.event_date) > now).length;
+      const upcomingEvents = eventsData.filter(e => new Date(e.event_date) > now).length;
       
       let totalTicketsSold = 0;
       let totalRevenue = 0;
-      
-      ordersRes.data.forEach(order => {
-        const amount = typeof order.total_amount === 'string' 
-          ? parseFloat(order.total_amount) 
-          : Number(order.total_amount) || 0;
-        totalRevenue += amount;
-        order.items.forEach(item => {
-          totalTicketsSold += item.qty;
+
+      if (auth?.user?.role === 'ADMIN') {
+        // สำหรับ ADMIN: คำนวณจาก events ทั้งหมดที่แสดง (รวม ticket_types)
+        eventsData.forEach(event => {
+          if (event.ticket_types) {
+            event.ticket_types.forEach(ticketType => {
+              totalTicketsSold += ticketType.sold_quantity;
+              totalRevenue += ticketType.price * ticketType.sold_quantity;
+            });
+          }
         });
-      });
+      } else {
+        // สำหรับ ORGANIZER: คำนวณจาก orders ของตัวเอง
+        ordersData.forEach(order => {
+          const amount = typeof order.total_amount === 'string' 
+            ? parseFloat(order.total_amount) 
+            : Number(order.total_amount) || 0;
+          totalRevenue += amount;
+          order.items.forEach(item => {
+            totalTicketsSold += item.qty;
+          });
+        });
+      }
 
       setStats({
-        totalEvents: eventsRes.data.length,
+        totalEvents: eventsData.length,
         totalTicketsSold,
         totalRevenue,
         upcomingEvents,
@@ -68,14 +93,54 @@ export default function OrganizerDashboard() {
   };
 
   const handleDeleteEvent = async (id: number) => {
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบงานคอนเสิร์ตนี้?')) return;
-    try {
-      await api.delete(`/organizer/events/${id}`);
-      setEvents(events.filter(e => e.id !== id));
-      alert('ลบงานสำเร็จ');
-      loadData();
-    } catch (error) {
-      alert('เกิดข้อผิดพลาดในการลบ');
+    const result = await Swal.fire({
+      title: 'คุณแน่ใจหรือไม่?',
+      text: 'คุณต้องการลบงานคอนเสิร์ตนี้หรือไม่?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'ใช่, ลบเลย!',
+      cancelButtonText: 'ยกเลิก',
+      customClass: {
+        popup: 'rounded-2xl',
+        confirmButton: 'rounded-xl',
+        cancelButton: 'rounded-xl',
+      },
+    });
+
+    if (result.isConfirmed) {
+      try {
+        // ถ้าเป็น ADMIN ใช้ deleteAdminEvent, ถ้าเป็น ORGANIZER ใช้ deleteOrganizerEvent
+        if (auth?.user?.role === 'ADMIN') {
+          await deleteAdminEvent(id);
+        } else {
+          await deleteOrganizerEvent(id);
+        }
+        setEvents(events.filter(e => e.id !== id));
+        await Swal.fire({
+          title: 'ลบสำเร็จ!',
+          text: 'งานคอนเสิร์ตถูกลบแล้ว',
+          icon: 'success',
+          confirmButtonColor: '#10b981',
+          customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl',
+          },
+        });
+        loadData();
+      } catch (error: any) {
+        await Swal.fire({
+          title: 'เกิดข้อผิดพลาด!',
+          text: error.response?.data?.message || 'เกิดข้อผิดพลาดในการลบ',
+          icon: 'error',
+          confirmButtonColor: '#ef4444',
+          customClass: {
+            popup: 'rounded-2xl',
+            confirmButton: 'rounded-xl',
+          },
+        });
+      }
     }
   };
 
@@ -99,17 +164,21 @@ export default function OrganizerDashboard() {
             <div>
               <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center">
                 <span className="mr-3">🎤</span>
-                Organizer Dashboard
+                {auth?.user?.role === 'ADMIN' ? 'Admin - Events Dashboard' : 'Organizer Dashboard'}
               </h1>
-              <p className="text-gray-600">จัดการงานคอนเสิร์ตของคุณ</p>
+              <p className="text-gray-600">
+                {auth?.user?.role === 'ADMIN' ? 'จัดการงานคอนเสิร์ตทั้งหมด' : 'จัดการงานคอนเสิร์ตของคุณ'}
+              </p>
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                to="/create-event"
-                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                ✨ สร้างงานใหม่
-              </Link>
+              {auth?.user?.role === 'ORGANIZER' && (
+                <Link
+                  to="/create-event"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  ✨ สร้างงานใหม่
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -141,7 +210,9 @@ export default function OrganizerDashboard() {
         {/* Events List */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">งานคอนเสิร์ตของคุณ</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              {auth?.user?.role === 'ADMIN' ? 'งานคอนเสิร์ตทั้งหมด' : 'งานคอนเสิร์ตของคุณ'}
+            </h2>
             <span className="text-gray-600">ทั้งหมด {events.length} งาน</span>
           </div>
 
@@ -149,13 +220,19 @@ export default function OrganizerDashboard() {
             <div className="text-center py-12">
               <div className="text-6xl mb-4">🎤</div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">ยังไม่มีงาน</h3>
-              <p className="text-gray-600 mb-6">เริ่มสร้างงานคอนเสิร์ตของคุณเลย!</p>
-              <Link
-                to="/create-event"
-                className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                สร้างงานใหม่
-              </Link>
+              <p className="text-gray-600 mb-6">
+                {auth?.user?.role === 'ADMIN' 
+                  ? 'ยังไม่มีงานคอนเสิร์ตในระบบ' 
+                  : 'เริ่มสร้างงานคอนเสิร์ตของคุณเลย!'}
+              </p>
+              {auth?.user?.role === 'ORGANIZER' && (
+                <Link
+                  to="/create-event"
+                  className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-bold hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  สร้างงานใหม่
+                </Link>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -227,12 +304,14 @@ export default function OrganizerDashboard() {
                         >
                           ดูรายละเอียด
                         </Link>
-                        <Link
-                          to={`/event/${event.id}/edit`}
-                          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-center py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition-all text-sm"
-                        >
-                          แก้ไข
-                        </Link>
+                        {auth?.user?.role === 'ORGANIZER' && (
+                          <Link
+                            to={`/event/${event.id}/edit`}
+                            className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-center py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition-all text-sm"
+                          >
+                            แก้ไข
+                          </Link>
+                        )}
                         <button
                           onClick={() => handleDeleteEvent(event.id)}
                           className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-600 transition-all text-sm"

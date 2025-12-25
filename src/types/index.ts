@@ -3,6 +3,7 @@ export interface User {
     email: string;
     role: 'USER' | 'ORGANIZER' | 'ADMIN';
     name: string;
+    lastname:string;
     organizerId?: number;
   }
   

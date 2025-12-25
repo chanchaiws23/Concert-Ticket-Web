@@ -12,6 +12,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import Profile from './pages/Profile';
 import OrderDetail from './pages/OrderDetail';
+import ManageUsers from './pages/ManageUsers';
+import ManageOrganizers from './pages/ManageOrganizers';
+import ManageTicketTypes from './pages/ManageTicketTypes';
 import NotFound from './pages/NotFound';
 import { AuthProvider } from './context/AuthContext';
 
@@ -80,6 +83,38 @@ function App() {
             element={
               <ProtectedRoute requiredRole="ORGANIZER">
                 <OrganizerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/users" 
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <ManageUsers />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/organizers" 
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <ManageOrganizers />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/ticket-types" 
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <ManageTicketTypes />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/organizer/ticket-types" 
+            element={
+              <ProtectedRoute requiredRole="ORGANIZER">
+                <ManageTicketTypes />
               </ProtectedRoute>
             } 
           />

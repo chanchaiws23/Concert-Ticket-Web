@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { getOrderById } from '../api';
 import type { Order } from '../types';
 import Loading from '../components/Loading';
 
@@ -15,9 +15,10 @@ export default function OrderDetail() {
   }, [id]);
 
   const loadOrder = async () => {
+    if (!id) return;
     try {
-      const res = await api.get<Order>(`/orders/${id}`);
-      setOrder(res.data);
+      const orderData = await getOrderById(parseInt(id));
+      setOrder(orderData);
     } catch (error) {
       alert('ไม่พบคำสั่งซื้อ');
       navigate('/my-orders');

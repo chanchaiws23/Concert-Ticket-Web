@@ -1,7 +1,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
-import api from '../api/axios';
+import { updateProfile, changePassword } from '../api';
 import Loading from '../components/Loading';
 
 export default function Profile() {
@@ -10,6 +10,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: auth?.user?.name || '',
+    lastname: auth?.user?.lastname || '',
     email: auth?.user?.email || '',
     currentPassword: '',
     newPassword: '',
@@ -30,7 +31,7 @@ export default function Profile() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.put('/user/profile', {
+      await updateProfile({
         name: form.name,
         email: form.email,
       });
@@ -50,7 +51,7 @@ export default function Profile() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (form.newPassword !== form.confirmPassword) {
       showToast('รหัสผ่านไม่ตรงกัน', 'error');
       return;
@@ -63,7 +64,7 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      await api.put('/user/change-password', {
+      await changePassword({
         currentPassword: form.currentPassword,
         newPassword: form.newPassword,
       });
@@ -104,14 +105,14 @@ export default function Profile() {
             <h2 className="text-2xl font-bold mb-6 text-gray-800">ข้อมูลส่วนตัว</h2>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div>
-                <label className="block text-gray-700 font-semibold mb-2">ชื่อ</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border-2 border-gray-200 p-3 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-                  required
-                />
+                  <label className="block text-gray-700 font-semibold mb-2">ชื่อ</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full border-2 border-gray-200 p-3 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                    required
+                  />
               </div>
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">อีเมล</label>
@@ -126,11 +127,10 @@ export default function Profile() {
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">บทบาท</label>
                 <div className="w-full border-2 border-gray-200 p-3 rounded-xl bg-gray-50">
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                    auth.user.role === 'ADMIN' ? 'bg-red-100 text-red-800' :
-                    auth.user.role === 'ORGANIZER' ? 'bg-purple-100 text-purple-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${auth.user.role === 'ADMIN' ? 'bg-red-100 text-red-800' :
+                      auth.user.role === 'ORGANIZER' ? 'bg-purple-100 text-purple-800' :
+                        'bg-blue-100 text-blue-800'
+                    }`}>
                     {auth.user.role}
                   </span>
                 </div>

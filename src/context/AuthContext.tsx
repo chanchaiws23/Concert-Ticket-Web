@@ -32,7 +32,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       id: res.data.id, // ต้องดูว่า backend ส่ง id มาไหม ถ้าไม่ส่งอาจต้อง decode token
       email: email, // หรือเอาจาก res.data
       role: res.data.role,
-      name: res.data.name
+      name: res.data.name,
+      lastname: res.data.lastname
     };
     localStorage.setItem('user_info', JSON.stringify(userData));
     setUser(userData);

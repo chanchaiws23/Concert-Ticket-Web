@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
+import { createEvent } from '../api';
+import { useToast } from '../hooks/useToast';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
+  const { showToast, ToastComponent } = useToast();
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: '', description: '', venue: '', event_date: '', poster_url: ''
   });
@@ -23,17 +26,37 @@ export default function CreateEvent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      await api.post('/events', { ...form, ticket_types: tickets });
-      alert('สร้างงานสำเร็จ! 🎉');
-      navigate('/');
-    } catch (error) {
-      alert('เกิดข้อผิดพลาด');
+      // แปลง event_date เป็น ISO format
+      const eventDate = new Date(form.event_date).toISOString();
+      
+      await createEvent({
+        title: form.title,
+        description: form.description,
+        venue: form.venue,
+        eventDate: eventDate,
+        posterUrl: form.poster_url,
+        ticketTypes: tickets.map(t => ({
+          name: t.name,
+          price: t.price,
+          total_quantity: t.total_quantity,
+        })),
+      });
+      showToast('สร้างงานสำเร็จ! 🎉', 'success');
+      setTimeout(() => {
+        navigate('/');
+      }, 1500);
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'เกิดข้อผิดพลาด', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 py-12 px-4">
+      {ToastComponent}
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
@@ -141,9 +164,10 @@ export default function CreateEvent() {
 
             <button 
               type="submit"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ✨ ยืนยันการสร้างงาน
+              {loading ? 'กำลังสร้าง...' : '✨ ยืนยันการสร้างงาน'}
             </button>
           </form>
         </div>
