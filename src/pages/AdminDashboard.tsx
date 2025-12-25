@@ -723,7 +723,7 @@ export default function AdminDashboard() {
                     <div key={order.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:shadow-lg transition-shadow">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <p className="text-sm text-gray-500">Order #{order.id}</p>
+                          <p className="text-sm text-gray-500">Order {order.order_code || `#${order.id}`}</p>
                           <p className="text-xs text-gray-400">
                             {new Date(order.created_at).toLocaleString('th-TH')}
                           </p>

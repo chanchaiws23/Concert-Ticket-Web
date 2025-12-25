@@ -336,7 +336,7 @@ export default function OrganizerDashboard() {
                 <div key={order.id} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="font-semibold text-gray-800">Order #{order.id}</p>
+                      <p className="font-semibold text-gray-800">Order {order.order_code || `#${order.id}`}</p>
                       <p className="text-xs text-gray-500">
                         {new Date(order.created_at).toLocaleString('th-TH')}
                       </p>

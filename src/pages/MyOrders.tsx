@@ -34,8 +34,14 @@ export default function MyOrders() {
                 className="bg-white rounded-2xl shadow-xl p-6 relative overflow-hidden border-2 border-transparent hover:border-purple-300 transition-all duration-300 transform hover:-translate-y-1"
               >
                 {/* Status Badge */}
-                <div className="absolute top-0 right-0 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-4 py-2 rounded-bl-2xl font-bold shadow-lg">
-                  ✓ PAID
+                <div className={`absolute top-0 right-0 text-white text-xs px-4 py-2 rounded-bl-2xl font-bold shadow-lg ${
+                  order.status === 'PAID' 
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600' 
+                    : order.status === 'PENDING'
+                    ? 'bg-gradient-to-r from-yellow-500 to-orange-600'
+                    : 'bg-gradient-to-r from-gray-500 to-gray-600'
+                }`}>
+                  {order.status === 'PAID' ? '✓ PAID' : order.status === 'PENDING' ? '⏳ PENDING' : order.status}
                 </div>
                 
                 <div className="flex flex-col md:flex-row gap-6">
@@ -43,7 +49,7 @@ export default function MyOrders() {
                   <div className="flex-1">
                     <div className="mb-4 pb-4 border-b-2 border-dashed border-gray-200">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-gray-500 text-sm font-medium">Order #{order.id}</p>
+                        <p className="text-gray-500 text-sm font-medium">Order {order.order_code || `#${order.id}`}</p>
                         <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
                           {new Date(order.created_at).toLocaleDateString('th-TH', {
                             year: 'numeric',
@@ -73,19 +79,29 @@ export default function MyOrders() {
                         ฿{Number(order.total_amount).toLocaleString()}
                       </div>
                     </div>
-                    <Link
-                      to={`/order/${order.id}`}
-                      className="mt-4 block w-full text-center bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all text-sm"
-                    >
-                      ดูรายละเอียด →
-                    </Link>
+                    <div className="flex gap-2 mt-4">
+                      {order.status === 'PENDING' && (
+                        <Link
+                          to={`/payment/${order.id}`}
+                          className="flex-1 text-center bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all text-sm"
+                        >
+                          💳 ชำระเงิน
+                        </Link>
+                      )}
+                      <Link
+                        to={`/order/${order.id}`}
+                        className={`${order.status === 'PENDING' ? 'flex-1' : 'w-full'} text-center bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all text-sm`}
+                      >
+                        ดูรายละเอียด →
+                      </Link>
+                    </div>
                   </div>
 
                   {/* QR Code */}
                   <div className="flex items-center justify-center md:justify-end">
                     <div className="text-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border-2 border-gray-200">
                       <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=ORDER-${order.id}`} 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${order.order_code || `ORDER-${order.id}`}`} 
                         alt="QR Code" 
                         className="w-24 h-24 mix-blend-multiply mb-2"
                       />

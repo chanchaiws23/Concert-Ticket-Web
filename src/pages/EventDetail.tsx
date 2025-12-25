@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { getEventById, purchaseTickets } from '../api';
 import type { EventData } from '../types';
 import { useToast } from '../hooks/useToast';
+import Swal from 'sweetalert2';
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
@@ -42,17 +43,51 @@ export default function EventDetail() {
       }
     }
 
+    if (!selectedTicketId) {
+      showToast('กรุณาเลือกประเภทบัตร', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      await purchaseTickets({
+      const response = await purchaseTickets({
         items: [{ ticketTypeId: parseInt(selectedTicketId), quantity }]
       });
-      showToast('ซื้อบัตรสำเร็จ! เตรียมตัวไปมันส์ได้เลย 🎉', 'success');
-      setTimeout(() => {
-        navigate('/my-orders');
-      }, 1500);
+      
+      if (response.success) {
+        showToast('ซื้อบัตรสำเร็จ! เตรียมตัวไปมันส์ได้เลย 🎉', 'success');
+        setTimeout(() => {
+          // Navigate to payment page if order is created
+          if (response.orderId) {
+            navigate(`/payment/${response.orderId}`);
+          } else {
+            navigate('/my-orders');
+          }
+        }, 1500);
+      }
     } catch (error: any) {
-      showToast(error.response?.data?.error || 'เกิดข้อผิดพลาดในการซื้อบัตร', 'error');
+      console.error('Purchase error:', error);
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'เกิดข้อผิดพลาดในการซื้อบัตร';
+      
+      // แสดง error message ที่ชัดเจนขึ้น
+      await Swal.fire({
+        title: 'เกิดข้อผิดพลาด!',
+        html: `
+          <p class="mb-2">${errorMessage}</p>
+          ${error.response?.status === 400 ? 
+            '<p class="text-sm text-gray-600">กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง</p>' : 
+            ''
+          }
+        `,
+        icon: 'error',
+        confirmButtonColor: '#ef4444',
+        customClass: {
+          popup: 'rounded-2xl',
+          confirmButton: 'rounded-xl',
+        },
+      });
     } finally {
       setLoading(false);
     }

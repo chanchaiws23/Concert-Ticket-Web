@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import Profile from './pages/Profile';
 import OrderDetail from './pages/OrderDetail';
+import Payment from './pages/Payment';
 import ManageUsers from './pages/ManageUsers';
 import ManageOrganizers from './pages/ManageOrganizers';
 import ManageTicketTypes from './pages/ManageTicketTypes';
@@ -43,6 +44,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrderDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/payment/:id" 
+            element={
+              <ProtectedRoute>
+                <Payment />
               </ProtectedRoute>
             } 
           />

@@ -26,3 +26,6 @@ export * from './ticketTypes';
 // User Profile
 export * from './profile';
 
+// Payments
+export * from './payments';
+
